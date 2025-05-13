@@ -203,7 +203,7 @@ public class BeforeLoadLocal extends LocalVariableInjectionPoint {
     boolean find(InjectionInfo info, InsnList insns, Collection<AbstractInsnNode> nodes, Target target) {
         SearchState state = new SearchState();
 
-        ListIterator<AbstractInsnNode> iter = insns.iterator();
+        ListIterator<AbstractInsnNode> iter = target.method.instructions.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
             if (state.isPendingCheck()) {
