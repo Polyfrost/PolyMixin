@@ -52,6 +52,7 @@ import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.mixin.transformer.SpongeASMRelocationTweaker;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.IClassTracker;
@@ -154,6 +155,8 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     public void prepare() {
         // Only needed in dev, in production this would be handled by the tweaker
         Launch.classLoader.addClassLoaderExclusion(MixinServiceAbstract.LAUNCH_PACKAGE);
+
+        Launch.classLoader.registerTransformer(SpongeASMRelocationTweaker.class.getName());
     }
     
     /* (non-Javadoc)
