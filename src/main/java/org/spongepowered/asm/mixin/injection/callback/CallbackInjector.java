@@ -24,11 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -45,12 +41,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.MixinInheritanceTracker;
-import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.Bytecode;
-import org.spongepowered.asm.util.Constants;
-import org.spongepowered.asm.util.Locals;
-import org.spongepowered.asm.util.PrettyPrinter;
-import org.spongepowered.asm.util.SignaturePrinter;
+import org.spongepowered.asm.util.*;
 
 import com.google.common.base.Strings;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
@@ -369,7 +360,7 @@ public class CallbackInjector extends Injector {
     /**
      * Decorator key for local variables decoration
      */
-    private static final String LOCALS_KEY = "locals";
+    private static final String LOCALS_KEY = "locals(useNewLocals=%s)";
 
     /**
      * True if cancellable 
@@ -465,15 +456,18 @@ public class CallbackInjector extends Injector {
     
     @Override
     protected void preInject(Target target, InjectionNode node) {
-        if ((this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) && !node.hasDecoration(CallbackInjector.LOCALS_KEY)) {
-            LocalVariableNode[] locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
-            for (int j = 0; j < locals.length; j++) {
-                if (locals[j] != null && locals[j].desc != null && locals[j].desc.startsWith("Lorg/spongepowered/asm/mixin/injection/callback/")) {
-                    locals[j] = null;
+        LocalsCompat.withContext(this.info.getMixin().getMixin(), () -> {
+            if ((this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) && !node.hasDecoration(getLocalsKey())) {
+                LocalVariableNode[] locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
+                for (int j = 0; j < locals.length; j++) {
+                    if (locals[j] != null && locals[j].desc != null && locals[j].desc.startsWith("Lorg/spongepowered/asm/mixin/injection/callback/")) {
+                        locals[j] = null;
+                    }
                 }
+
+                node.decorate(getLocalsKey(), locals);
             }
-            node.<LocalVariableNode[]>decorate(CallbackInjector.LOCALS_KEY, locals);
-        }
+        });
     }
 
     /* (non-Javadoc)
@@ -483,8 +477,14 @@ public class CallbackInjector extends Injector {
      */
     @Override
     protected void inject(Target target, InjectionNode node) {
-        LocalVariableNode[] locals = node.<LocalVariableNode[]>getDecoration(CallbackInjector.LOCALS_KEY);
-        this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
+        LocalsCompat.withContext(this.info.getMixin().getMixin(), () -> {
+            LocalVariableNode[] locals = node.getDecoration(getLocalsKey());
+            this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
+        });
+    }
+
+    private String getLocalsKey() {
+        return String.format(LOCALS_KEY, LocalsCompat.isNewLocalsAvailable());
     }
 
     /**

@@ -47,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.LocalsCompat;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
@@ -147,7 +148,11 @@ public class ModifyVariableInjector extends Injector {
      * @return Key for storing/retrieving the injector context decoration
      */
     protected String getTargetNodeKey(Target target, InjectionNode node) {
-        return String.format("localcontext(%s,%s,#%s)", this.returnType, this.discriminator.isArgsOnly() ? "argsOnly" : "fullFrame", node.getId());
+        return LocalsCompat.withContext(
+                this.info.getMixin().getMixin(),
+                () -> String.format("localcontext(%s,%s,#%s,useNewLocals=%s)",
+                        this.returnType, this.discriminator.isArgsOnly() ? "argsOnly" : "fullFrame",
+                        node.getId(), LocalsCompat.isNewLocalsAvailable()));
     }
     
     @Override
