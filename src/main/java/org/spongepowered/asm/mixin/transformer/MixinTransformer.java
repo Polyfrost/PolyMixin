@@ -288,4 +288,13 @@ final class MixinTransformer extends TreeTransformer implements IMixinTransforme
         return classNode;
     }
 
+
+    private void selectConfigs(MixinEnvironment environment) {
+        processor.selectConfigs(environment);
+    }
+
+    private void prepareConfigs(MixinEnvironment environment) {
+        processor.prepareConfigs(environment);
+    }
+
 }

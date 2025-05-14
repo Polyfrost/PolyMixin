@@ -487,7 +487,7 @@ class MixinProcessor {
      * 
      * @param environment Environment to query
      */
-    private void selectConfigs(MixinEnvironment environment) {
+    protected void selectConfigs(MixinEnvironment environment) {
         for (Iterator<Config> iter = Mixins.getConfigs().iterator(); iter.hasNext();) {
             Config handle = iter.next();
             try {
@@ -512,7 +512,7 @@ class MixinProcessor {
      * @param environment Environment
      * @return total number of mixins initialised
      */
-    private int prepareConfigs(MixinEnvironment environment, Extensions extensions) {
+    protected int prepareConfigs(MixinEnvironment environment, Extensions extensions) {
         int totalMixins = 0;
         
         final IHotSwap hotSwapper = this.hotSwapper;
@@ -579,6 +579,10 @@ class MixinProcessor {
         this.pendingConfigs.clear();
         
         return totalMixins;
+    }
+
+    protected int prepareConfigs(MixinEnvironment environment) {
+        return this.prepareConfigs(environment, this.extensions);
     }
 
     private void handleMixinPrepareError(MixinConfig config, InvalidMixinException ex, MixinEnvironment environment) throws MixinPrepareError {

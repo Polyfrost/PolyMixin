@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.throwables.MixinError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
@@ -391,6 +392,10 @@ public final class TargetSelector {
      * @return parsed target selector
      */
     public static ITargetSelector parse(String string, ISelectorContext context) {
+        if (string == null) {
+            return new MemberInfo(null, Quantifier.DEFAULT);
+        }
+
         string = string.trim();
         
         // Ending with slash indicates a regex target, no other type of target
