@@ -2,8 +2,9 @@ package org.spongepowered.asm.mixin.transformer;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import org.objectweb.asm.*;
-import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
+import org.spongepowered.asm.logging.ILogger;
+import org.spongepowered.asm.service.MixinService;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -13,6 +14,15 @@ public class SpongeASMRelocationTweaker implements IClassTransformer {
     private static final String SPONGE_PACKAGE = "org/spongepowered/asm/lib/";
 
     private static final byte[] SPONGE_PACKAGE_BYTES = SPONGE_PACKAGE.getBytes(StandardCharsets.UTF_8);
+
+    private static final String REMAPPER_CLASS = "org.objectweb.asm.commons.ClassRemapper";
+    private static final String REMAPPER_CLASS_LEGACY = "org.objectweb.asm.commons.RemappingClassAdapter";
+    /**
+     * Resolved ClassRemapper class
+     */
+    private static Class<? extends ClassVisitor> clRemapper;
+
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     private static final Remapper remapper = new Remapper() {
         @Override
@@ -35,10 +45,12 @@ public class SpongeASMRelocationTweaker implements IClassTransformer {
         ClassReader classReader = new ClassReader(bytes);
         ClassWriter classWriter = new ClassWriter(0);
         try {
-            classReader.accept(new ClassRemapper(new DuplicateClassWriter(classWriter), remapper), 0);
+            classReader.accept(SpongeASMRelocationTweaker.createRemappingAdapter(new DuplicateClassWriter(classWriter), remapper), 0);
             return classWriter.toByteArray();
         } catch (DuplicateMethodException ignored) {
 
+        } catch (ReflectiveOperationException e) {
+            SpongeASMRelocationTweaker.logger.catching(e);
         }
         return bytes;
     }
@@ -85,5 +97,38 @@ public class SpongeASMRelocationTweaker implements IClassTransformer {
             return i;
         }
         return -1;
+    }
+
+    /**
+     * Since we still technically support ASM5, and the remapping visitor class
+     * was refactored between ASM 5.0.3 and ASM 5.2, we can instatiate it using
+     * reflection in order to try both variants. Throws CNFE if the class can't
+     * be loaded for some reason
+     *
+     * @param cv Upstream ClassVisitor
+     * @param remapper Remapper to use
+     * @return New ClassRemapper or RemappingClassAdapter
+     * @throws ReflectiveOperationException if something goes wrong
+     */
+    @SuppressWarnings("unchecked")
+    private static ClassVisitor createRemappingAdapter(ClassVisitor cv, Remapper remapper) throws ReflectiveOperationException {
+        if (SpongeASMRelocationTweaker.clRemapper == null) {
+            try {
+                SpongeASMRelocationTweaker.clRemapper = (Class<? extends ClassVisitor>)Class.forName(SpongeASMRelocationTweaker.REMAPPER_CLASS);
+            } catch (ClassNotFoundException ex) {
+                // expected under ASM 5.0.3 since the new class doesn't exist yet
+            }
+
+            if (SpongeASMRelocationTweaker.clRemapper == null) {
+                try {
+                    SpongeASMRelocationTweaker.clRemapper = (Class<? extends ClassVisitor>)Class.forName(SpongeASMRelocationTweaker.REMAPPER_CLASS_LEGACY);
+                } catch (ClassNotFoundException ex) {
+                    // Not expected
+                    throw new ClassNotFoundException(SpongeASMRelocationTweaker.REMAPPER_CLASS + " or " + SpongeASMRelocationTweaker.REMAPPER_CLASS_LEGACY);
+                }
+            }
+        }
+
+        return SpongeASMRelocationTweaker.clRemapper.getConstructor(ClassVisitor.class, Remapper.class).newInstance(cv, remapper);
     }
 }
