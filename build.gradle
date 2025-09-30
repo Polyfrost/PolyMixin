@@ -357,7 +357,7 @@ configurations.archives.artifacts.clear()
 // generate shadow jar so we can use the AP standalone
 shadowJar  {
     from sourceSets.ap.output
-    classifier = 'processor'
+    archiveClassifier = 'processor'
 }
 build.dependsOn(shadowJar)
 
@@ -399,13 +399,13 @@ task sourceJar(type: Jar) {
         from it.java
         from it.resources
     }
-	classifier = "sources"
+	archiveClassifier = "sources"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
 	from javadoc.destinationDir
-	classifier = "javadoc"
+    archiveClassifier = "javadoc"
 }
 
 artifacts {
@@ -468,6 +468,15 @@ publishing {
         maven {
             name = "snapshots"
             url = "https://repo.polyfrost.org/snapshots"
+            credentials(PasswordCredentials.class)
+            authentication {
+                create(BasicAuthentication.class)
+            }
+        }
+
+        maven {
+            name = "releases"
+            url = "https://repo.polyfrost.org/releases"
             credentials(PasswordCredentials.class)
             authentication {
                 create(BasicAuthentication.class)
